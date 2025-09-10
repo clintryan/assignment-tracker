@@ -37,6 +37,76 @@
                 </div>
             </div>
 
+            <!-- Stats Dashboard -->
+            <div id="stats-dashboard" class="mb-6 bg-gray-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Class Statistics</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-500">Completion Rate</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="completion-rate">—</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-500">Students with Missing Work</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="missing-students">—</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-500">Total Assignments</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="total-assignments">—</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-500">Most Problematic Assignment</p>
+                                <p class="text-sm font-semibold text-gray-900" id="problematic-assignment">—</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Table Container -->
             <div class="overflow-x-auto">
                 <div id="table-container">
@@ -122,6 +192,84 @@
                     <div class="mt-2 text-gray-600">Loading data from Google Sheets...</div>
                 </div>
             `;
+            
+            // Reset stats during loading
+            document.getElementById('completion-rate').textContent = '—';
+            document.getElementById('missing-students').textContent = '—';
+            document.getElementById('total-assignments').textContent = '—';
+            document.getElementById('problematic-assignment').textContent = '—';
+        }
+
+        // Function to calculate and display statistics
+        function calculateAndDisplayStats(lines, assignmentHeaders) {
+            const studentData = lines.slice(2);
+            const totalStudents = studentData.filter(line => line.split(',')[0].trim()).length;
+            const totalAssignments = assignmentHeaders.length;
+            
+            if (totalStudents === 0 || totalAssignments === 0) {
+                // Reset stats if no data
+                document.getElementById('completion-rate').textContent = '—';
+                document.getElementById('missing-students').textContent = '—';
+                document.getElementById('total-assignments').textContent = '—';
+                document.getElementById('problematic-assignment').textContent = '—';
+                return;
+            }
+
+            // Calculate completion statistics
+            let totalPossibleCompletions = totalStudents * totalAssignments;
+            let actualCompletions = 0;
+            let studentsWithMissingWork = 0;
+            let assignmentMissingCounts = new Array(totalAssignments).fill(0);
+
+            studentData.forEach(line => {
+                const columns = line.split(',');
+                const studentName = columns[0].trim();
+                if (!studentName) return;
+
+                let studentHasMissing = false;
+                
+                assignmentHeaders.forEach((_, index) => {
+                    const statusKey = (columns[index + 1] || '').trim();
+                    
+                    if (statusKey === 'c' || statusKey === 'AS' || statusKey === 'MS') {
+                        actualCompletions++;
+                    } else if (statusKey === 'm') {
+                        studentHasMissing = true;
+                        assignmentMissingCounts[index]++;
+                    } else if (statusKey === 'i') {
+                        studentHasMissing = true;
+                    }
+                });
+
+                if (studentHasMissing) {
+                    studentsWithMissingWork++;
+                }
+            });
+
+            // Calculate completion rate
+            const completionRate = totalPossibleCompletions > 0 
+                ? Math.round((actualCompletions / totalPossibleCompletions) * 100) 
+                : 0;
+
+            // Find most problematic assignment
+            let maxMissing = 0;
+            let problematicAssignmentIndex = 0;
+            assignmentMissingCounts.forEach((count, index) => {
+                if (count > maxMissing) {
+                    maxMissing = count;
+                    problematicAssignmentIndex = index;
+                }
+            });
+
+            const problematicAssignment = maxMissing > 0 
+                ? assignmentHeaders[problematicAssignmentIndex].trim()
+                : 'None';
+
+            // Update the stats display
+            document.getElementById('completion-rate').textContent = `${completionRate}%`;
+            document.getElementById('missing-students').textContent = `${studentsWithMissingWork}/${totalStudents}`;
+            document.getElementById('total-assignments').textContent = totalAssignments.toString();
+            document.getElementById('problematic-assignment').textContent = problematicAssignment;
         }
 
         async function parseAndRender() {
@@ -187,6 +335,9 @@
             tableHTML += `</tbody></table>`;
 
             document.getElementById('table-container').innerHTML = tableHTML;
+            
+            // Calculate and display statistics
+            calculateAndDisplayStats(lines, assignmentHeaders);
         }
         
         function populateLegend() {
