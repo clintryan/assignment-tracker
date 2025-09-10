@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Assignment Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -102,6 +103,21 @@
                                 <p class="text-sm font-medium text-gray-500">Most Problematic Assignment</p>
                                 <p class="text-sm font-semibold text-gray-900" id="problematic-assignment">—</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie Chart Section -->
+            <div class="mb-6 bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Assignment Status Distribution</h3>
+                <div class="flex flex-col lg:flex-row items-center">
+                    <div class="w-full lg:w-1/2 mb-4 lg:mb-0">
+                        <canvas id="statusPieChart" width="300" height="300"></canvas>
+                    </div>
+                    <div class="w-full lg:w-1/2 lg:pl-6">
+                        <div id="chart-legend" class="space-y-2">
+                            <!-- Chart legend will be populated by JS -->
                         </div>
                     </div>
                 </div>
@@ -272,6 +288,159 @@
             document.getElementById('incomplete-percentage').textContent = `${incompletePercentage}%`;
             document.getElementById('total-assignments').textContent = totalAssignments.toString();
             document.getElementById('problematic-assignment').textContent = problematicAssignment;
+            
+            // Update pie chart
+            updatePieChart(lines, assignmentHeaders);
+        }
+
+        // Global variable to store the chart instance
+        let statusChart = null;
+
+        // Function to update the pie chart
+        function updatePieChart(lines, assignmentHeaders) {
+            const studentData = lines.slice(2);
+            
+            // Count status occurrences
+            const statusCounts = {
+                'c': 0,
+                'e': 0,
+                'i': 0,
+                'm': 0,
+                'empty': 0
+            };
+
+            studentData.forEach(line => {
+                const columns = line.split(',');
+                const studentName = columns[0].trim();
+                if (!studentName) return;
+
+                assignmentHeaders.forEach((_, index) => {
+                    const statusKey = (columns[index + 1] || '').trim();
+                    if (statusKey && statusCounts.hasOwnProperty(statusKey)) {
+                        statusCounts[statusKey]++;
+                    } else if (!statusKey) {
+                        statusCounts.empty++;
+                    }
+                });
+            });
+
+            // Prepare chart data
+            const chartData = [];
+            const chartLabels = [];
+            const chartColors = [];
+            const chartHoverColors = [];
+
+            // Add data for each status (excluding empty)
+            Object.keys(statusCounts).forEach(status => {
+                if (status !== 'empty' && statusCounts[status] > 0) {
+                    const statusInfo = statusMap[status];
+                    chartLabels.push(statusInfo.text);
+                    chartData.push(statusCounts[status]);
+                    chartColors.push(getColorValue(statusInfo.color));
+                    chartHoverColors.push(getHoverColorValue(statusInfo.color));
+                }
+            });
+
+            // Add empty data if there are empty cells
+            if (statusCounts.empty > 0) {
+                chartLabels.push('Not Assigned');
+                chartData.push(statusCounts.empty);
+                chartColors.push('#E5E7EB'); // gray-200
+                chartHoverColors.push('#D1D5DB'); // gray-300
+            }
+
+            // Destroy existing chart if it exists
+            if (statusChart) {
+                statusChart.destroy();
+            }
+
+            // Create new chart
+            const ctx = document.getElementById('statusPieChart').getContext('2d');
+            statusChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: chartColors,
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        hoverBackgroundColor: chartHoverColors,
+                        hoverBorderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // We'll create a custom legend
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update custom legend
+            updateChartLegend(chartLabels, chartData, chartColors);
+        }
+
+        // Helper function to get color values
+        function getColorValue(colorName) {
+            const colorMap = {
+                'green': '#10B981',   // emerald-500
+                'blue': '#3B82F6',    // blue-500
+                'yellow': '#F59E0B',  // amber-500
+                'red': '#EF4444'      // red-500
+            };
+            return colorMap[colorName] || '#6B7280';
+        }
+
+        // Helper function to get hover color values
+        function getHoverColorValue(colorName) {
+            const colorMap = {
+                'green': '#059669',   // emerald-600
+                'blue': '#2563EB',    // blue-600
+                'yellow': '#D97706',  // amber-600
+                'red': '#DC2626'      // red-600
+            };
+            return colorMap[colorName] || '#4B5563';
+        }
+
+        // Function to update the custom chart legend
+        function updateChartLegend(labels, data, colors) {
+            const legendContainer = document.getElementById('chart-legend');
+            const total = data.reduce((a, b) => a + b, 0);
+            
+            let legendHTML = '';
+            labels.forEach((label, index) => {
+                const count = data[index];
+                const percentage = ((count / total) * 100).toFixed(1);
+                const color = colors[index];
+                
+                legendHTML += `
+                    <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full mr-3" style="background-color: ${color};"></div>
+                            <span class="text-sm font-medium text-gray-700">${label}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-semibold text-gray-900">${count}</div>
+                            <div class="text-xs text-gray-500">${percentage}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            legendContainer.innerHTML = legendHTML;
         }
 
         async function parseAndRender() {
