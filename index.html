@@ -33,7 +33,7 @@
                         <option value="7ab-ss">7AB Social Studies</option>
                     </select>
                 </div>
-                <div id="legend" class="mt-6 sm:mt-0 flex flex-wrap gap-x-8 gap-y-4">
+                <div id="legend" class="mt-8 sm:mt-0 flex flex-wrap gap-x-12 gap-y-6">
                     <!-- Legend will be populated by JS -->
                 </div>
             </div>
@@ -592,8 +592,8 @@
                 const colors = colorClasses[status.color];
                 legendHTML += `
                     <div class="flex items-center">
-                        <svg class="w-6 h-6 mr-3 ${colors.icon}" fill="none" stroke-width="2" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="${status.icon}"></path></svg>
-                        <span class="text-base font-medium text-gray-700">${status.text}</span>
+                        <svg class="w-8 h-8 mr-4 ${colors.icon}" fill="none" stroke-width="2.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="${status.icon}"></path></svg>
+                        <span class="text-xl font-semibold text-gray-800">${status.text}</span>
                     </div>`;
                 displayedStatuses.add(status.text);
             });
