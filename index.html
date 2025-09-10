@@ -52,105 +52,16 @@
     </div>
 
     <script>
-        // Store CSV data directly in the script
-        const csvData = {
-            '7gh-ela': `Formative Work:,Notebook Check,L2: Stop & Jot
-Assigned on: ,,09/09
-Plato,BS,i
-Pun,AS,c
-Janjar,,m
-Hannah F,,m
-Yara,,c
-KK,MS,c
-Nora,,c
-Tann,,i
-Zoey,,c
-Kamine,AS,e
-Pli-Poe,,c
-Aaron,AS,e
-Zyan,,i
-Cleve,BS,c
-Ida,BS,c
-DB,AS,m
-Hannah S,AS,e
-Sammy,AS,c
-Leo,,c
-Peng Peng,AS,c
-Jonathan,MS,c
-Lucas,,`,
-            '7gh-ss': `Assignments: ,L11: Propaganda Webquest,L12: Group Propaganda Analysis
-Assigned on: ,09/08,09/09
-Plato,c,
-Pun,c,
-Janjar,c,
-Hannah,c,
-Yara,c,
-KK,c,
-Nora,c,
-Tann,c,
-Zoey,c,
-Kamine,c,
-Pli-Poe,c,
-Aaron,c,
-Zyan,c,
-Cleve,c,
-Ida,c,
-DB,c,
-Hannah,c,
-Sammy,c,
-Leo,c,
-Peng Peng,c,
-Jonathan,c,
-Lucas,c,`,
-            '7ab-ela': `Formative Assignments:,Notebook Check,L2: Stop & Jot
-Assigned on: ,,09/09
-Emma,c,c
-Emily C,m,i
-Chris,m,c
-Nathan,m,m
-Kensie,m,e
-Elisha,e,e
-Gwyn,c,m
-Oscar,m,m
-David,c,e
-Petal,e,c
-Able,m,i
-Colin,e,c
-TinTin,m,c
-Tan,c,c
-Theya,m,i
-Goon Sue,c,c
-Bam,e,c
-Luke,m,m
-Samuel,m,m
-Viola,e,c
-Maggie,e,c
-Emily Z,e,m`,
-            '7ab-ss': `Formative Assignments: ,L11: Propaganda Webquest,L12: Analyzing Propaganda Posters
-Assigned on: ,08/08,09/09
-Emma,c,
-Emily C,c,
-Chris,c,
-Nathan,c,
-Kensie,c,
-Elisha,c,
-Gwyn,c,
-Oscar,c,
-David,c,
-Petal,c,
-Able,c,
-Colin,c,
-TinTin,c,
-Tan,c,
-Theya,c,
-Goon Sue,c,
-Bam,c,
-Luke,c,
-Samuel,c,
-Viola,c,
-Maggie,c,
-Emily Z,c,`
+        // Google Sheets CSV URLs
+        const csvUrls = {
+            '7gh-ela': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfw36kO4YEhF1HLozChrNPcvXKg0c0RNXJ5WWwhCr62i9mkauiTT2v4JpOg1gECZEteySNmAPyzxR8/pub?gid=1302331666&single=true&output=csv',
+            '7gh-ss': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfw36kO4YEhF1HLozChrNPcvXKg0c0RNXJ5WWwhCr62i9mkauiTT2v4JpOg1gECZEteySNmAPyzxR8/pub?gid=632874045&single=true&output=csv',
+            '7ab-ela': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfw36kO4YEhF1HLozChrNPcvXKg0c0RNXJ5WWwhCr62i9mkauiTT2v4JpOg1gECZEteySNmAPyzxR8/pub?gid=73834669&single=true&output=csv',
+            '7ab-ss': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQfw36kO4YEhF1HLozChrNPcvXKg0c0RNXJ5WWwhCr62i9mkauiTT2v4JpOg1gECZEteySNmAPyzxR8/pub?gid=162306615&single=true&output=csv'
         };
+
+        // Cache for CSV data to avoid repeated fetches
+        const csvDataCache = {};
 
         const statusMap = {
             'c': { text: 'Complete', color: 'green', icon: 'M12.75 15l3-3m0 0l-3-3m3 3h-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -170,10 +81,59 @@ Emily Z,c,`
             gray: { bg: 'bg-gray-100', text: 'text-gray-800', icon: 'text-gray-500' },
         }
 
-        function parseAndRender() {
+        // Function to fetch CSV data from Google Sheets
+        async function fetchCsvData(classKey) {
+            // Return cached data if available
+            if (csvDataCache[classKey]) {
+                return csvDataCache[classKey];
+            }
+
+            try {
+                const response = await fetch(csvUrls[classKey]);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvText = await response.text();
+                
+                // Cache the data
+                csvDataCache[classKey] = csvText;
+                return csvText;
+            } catch (error) {
+                console.error('Error fetching CSV data:', error);
+                // Show error message to user
+                document.getElementById('table-container').innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-red-600 mb-2">⚠️ Error loading data</div>
+                        <div class="text-sm text-gray-500">Unable to fetch data from Google Sheets. Please check your internet connection and try again.</div>
+                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            Retry
+                        </button>
+                    </div>
+                `;
+                return null;
+            }
+        }
+
+        // Function to show loading state
+        function showLoadingState() {
+            document.getElementById('table-container').innerHTML = `
+                <div class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <div class="mt-2 text-gray-600">Loading data from Google Sheets...</div>
+                </div>
+            `;
+        }
+
+        async function parseAndRender() {
             const selector = document.getElementById('class-selector');
             const selectedValue = selector.value;
-            const rawData = csvData[selectedValue];
+            
+            // Show loading state
+            showLoadingState();
+            
+            // Fetch data from Google Sheets
+            const rawData = await fetchCsvData(selectedValue);
+            if (!rawData) return;
 
             const lines = rawData.trim().split('\n');
             const assignmentHeaders = lines[0].split(',').slice(1);
@@ -242,7 +202,7 @@ Emily Z,c,`
         }
 
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const selector = document.getElementById('class-selector');
             selector.addEventListener('change', parseAndRender);
             
@@ -252,7 +212,7 @@ Emily Z,c,`
             });
 
             // Initial render
-            parseAndRender();
+            await parseAndRender();
             populateLegend();
         });
 
