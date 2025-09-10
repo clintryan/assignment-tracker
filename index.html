@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Assignment Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Student Assignment Tracker</h1>
+            <p class="text-gray-600 mt-1">A clear and simple view of assignment status for students.</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <!-- Controls -->
+            <div class="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <label for="class-selector" class="font-medium text-gray-700">Select a Class:</label>
+                    <select id="class-selector" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="7gh-ela">7GH ELA</option>
+                        <option value="7gh-ss">7GH Social Studies</option>
+                        <option value="7ab-ela">7AB ELA</option>
+                        <option value="7ab-ss">7AB Social Studies</option>
+                    </select>
+                </div>
+                <div id="legend" class="mt-4 sm:mt-0 flex flex-wrap gap-x-4 gap-y-2">
+                    <!-- Legend will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+                <div id="table-container">
+                    <!-- Table will be dynamically generated here -->
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p>Generated on <span id="generation-date"></span></p>
+        </footer>
+
+    </div>
+
+    <script>
+        // Store CSV data directly in the script
+        const csvData = {
+            '7gh-ela': `Formative Work:,Notebook Check,L2: Stop & Jot
+Assigned on: ,,09/09
+Plato,BS,i
+Pun,AS,c
+Janjar,,m
+Hannah F,,m
+Yara,,c
+KK,MS,c
+Nora,,c
+Tann,,i
+Zoey,,c
+Kamine,AS,e
+Pli-Poe,,c
+Aaron,AS,e
+Zyan,,i
+Cleve,BS,c
+Ida,BS,c
+DB,AS,m
+Hannah S,AS,e
+Sammy,AS,c
+Leo,,c
+Peng Peng,AS,c
+Jonathan,MS,c
+Lucas,,`,
+            '7gh-ss': `Assignments: ,L11: Propaganda Webquest,L12: Group Propaganda Analysis
+Assigned on: ,09/08,09/09
+Plato,c,
+Pun,c,
+Janjar,c,
+Hannah,c,
+Yara,c,
+KK,c,
+Nora,c,
+Tann,c,
+Zoey,c,
+Kamine,c,
+Pli-Poe,c,
+Aaron,c,
+Zyan,c,
+Cleve,c,
+Ida,c,
+DB,c,
+Hannah,c,
+Sammy,c,
+Leo,c,
+Peng Peng,c,
+Jonathan,c,
+Lucas,c,`,
+            '7ab-ela': `Formative Assignments:,Notebook Check,L2: Stop & Jot
+Assigned on: ,,09/09
+Emma,c,c
+Emily C,m,i
+Chris,m,c
+Nathan,m,m
+Kensie,m,e
+Elisha,e,e
+Gwyn,c,m
+Oscar,m,m
+David,c,e
+Petal,e,c
+Able,m,i
+Colin,e,c
+TinTin,m,c
+Tan,c,c
+Theya,m,i
+Goon Sue,c,c
+Bam,e,c
+Luke,m,m
+Samuel,m,m
+Viola,e,c
+Maggie,e,c
+Emily Z,e,m`,
+            '7ab-ss': `Formative Assignments: ,L11: Propaganda Webquest,L12: Analyzing Propaganda Posters
+Assigned on: ,08/08,09/09
+Emma,c,
+Emily C,c,
+Chris,c,
+Nathan,c,
+Kensie,c,
+Elisha,c,
+Gwyn,c,
+Oscar,c,
+David,c,
+Petal,c,
+Able,c,
+Colin,c,
+TinTin,c,
+Tan,c,
+Theya,c,
+Goon Sue,c,
+Bam,c,
+Luke,c,
+Samuel,c,
+Viola,c,
+Maggie,c,
+Emily Z,c,`
+        };
+
+        const statusMap = {
+            'c': { text: 'Complete', color: 'green', icon: 'M12.75 15l3-3m0 0l-3-3m3 3h-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            'e': { text: 'Exempt', color: 'gray', icon: 'M18 12H6' },
+            'i': { text: 'Incomplete', color: 'yellow', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' },
+            'm': { text: 'Missing', color: 'red', icon: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            'AS': { text: 'At Standard', color: 'green', icon: 'M12.75 15l3-3m0 0l-3-3m3 3h-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            'MS': { text: 'Meets Standard', color: 'green', icon: 'M12.75 15l3-3m0 0l-3-3m3 3h-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+            'BS': { text: 'Below Standard', color: 'yellow', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' },
+            'default': { text: 'Missing', color: 'red', icon: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
+        };
+        
+        const colorClasses = {
+            green: { bg: 'bg-green-100', text: 'text-green-800', icon: 'text-green-500' },
+            yellow: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: 'text-yellow-500' },
+            red: { bg: 'bg-red-100', text: 'text-red-800', icon: 'text-red-500' },
+            gray: { bg: 'bg-gray-100', text: 'text-gray-800', icon: 'text-gray-500' },
+        }
+
+        function parseAndRender() {
+            const selector = document.getElementById('class-selector');
+            const selectedValue = selector.value;
+            const rawData = csvData[selectedValue];
+
+            const lines = rawData.trim().split('\n');
+            const assignmentHeaders = lines[0].split(',').slice(1);
+            const dateHeaders = lines[1].split(',').slice(1);
+            const studentData = lines.slice(2);
+
+            let tableHTML = `<table class="min-w-full divide-y divide-gray-200">`;
+
+            // Table Head
+            tableHTML += `<thead class="bg-gray-50"><tr>`;
+            tableHTML += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>`;
+            assignmentHeaders.forEach((header, index) => {
+                tableHTML += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div>${header.trim()}</div>
+                    <div class="font-normal text-gray-400">${dateHeaders[index] ? dateHeaders[index].trim() : ''}</div>
+                </th>`;
+            });
+            tableHTML += `</tr></thead>`;
+
+            // Table Body
+            tableHTML += `<tbody class="bg-white divide-y divide-gray-200">`;
+            studentData.forEach(line => {
+                const columns = line.split(',');
+                const studentName = columns[0].trim();
+                if (!studentName) return; // Skip empty lines
+
+                tableHTML += `<tr>`;
+                tableHTML += `<td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${studentName}</td>`;
+                
+                assignmentHeaders.forEach((_, index) => {
+                    const statusKey = (columns[index + 1] || '').trim();
+                    const status = statusMap[statusKey] || statusMap['default'];
+                    const colors = colorClasses[status.color];
+
+                    tableHTML += `<td class="px-6 py-4 whitespace-nowrap">`;
+                    tableHTML += `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text}">`;
+                    tableHTML += `<svg class="w-5 h-5 mr-2 ${colors.icon}" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="${status.icon}"></path></svg>`;
+                    tableHTML += status.text;
+                    tableHTML += `</span></td>`;
+                });
+
+                tableHTML += `</tr>`;
+            });
+            tableHTML += `</tbody></table>`;
+
+            document.getElementById('table-container').innerHTML = tableHTML;
+        }
+        
+        function populateLegend() {
+            const legendContainer = document.getElementById('legend');
+            const displayedStatuses = new Set();
+            let legendHTML = '';
+
+            Object.values(statusMap).forEach(status => {
+                if (status.text === 'Missing' && displayedStatuses.has('Missing')) return;
+
+                const colors = colorClasses[status.color];
+                legendHTML += `
+                    <div class="flex items-center">
+                        <svg class="w-4 h-4 mr-1.5 ${colors.icon}" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="${status.icon}"></path></svg>
+                        <span class="text-sm text-gray-600">${status.text}</span>
+                    </div>`;
+                displayedStatuses.add(status.text);
+            });
+            legendContainer.innerHTML = legendHTML;
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('class-selector');
+            selector.addEventListener('change', parseAndRender);
+            
+            // Set generation date
+            document.getElementById('generation-date').textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            // Initial render
+            parseAndRender();
+            populateLegend();
+        });
+
+    </script>
+</body>
+</html>
