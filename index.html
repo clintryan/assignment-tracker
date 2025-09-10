@@ -38,51 +38,45 @@
                 </div>
             </div>
 
-            <!-- Compact Dashboard -->
+            <!-- Comprehensive Dashboard -->
             <div class="mb-6 bg-white rounded-lg shadow-md p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Class Overview</h3>
                 <div class="flex flex-col lg:flex-row gap-6">
-                    <!-- Left side: Stats (1/3) -->
-                    <div class="w-full lg:w-1/3">
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                                    <span class="text-sm font-medium text-gray-700">Total Assignments</span>
-                                </div>
-                                <span class="text-lg font-semibold text-gray-900" id="total-assignments">—</span>
+                    <!-- Left side: Stats Grid + Pie Chart (2/3) -->
+                    <div class="w-full lg:w-2/3">
+                        <!-- 2x2 Stats Grid -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-blue-100 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-blue-800" id="excellent-percentage">—</div>
+                                <div class="text-sm text-blue-600">Excellent!</div>
                             </div>
-                            
-                            <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                                    <span class="text-sm font-medium text-gray-700">Completion Rate</span>
-                                </div>
-                                <span class="text-lg font-semibold text-gray-900" id="completion-rate">—</span>
+                            <div class="bg-green-100 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-green-800" id="completion-rate">—</div>
+                                <div class="text-sm text-green-600">Complete</div>
                             </div>
-                            
-                            <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                                    <span class="text-sm font-medium text-gray-700">Incomplete/Missing</span>
-                                </div>
-                                <span class="text-lg font-semibold text-gray-900" id="incomplete-percentage">—</span>
+                            <div class="bg-yellow-100 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-yellow-800" id="incomplete-percentage">—</div>
+                                <div class="text-sm text-yellow-600">Incomplete</div>
                             </div>
-                            
-                            <div class="py-2 px-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center mb-1">
-                                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                                    <span class="text-sm font-medium text-gray-700">Most Problematic</span>
-                                </div>
-                                <div class="text-sm text-gray-600 ml-6" id="problematic-assignment">—</div>
+                            <div class="bg-red-100 rounded-lg p-4 text-center">
+                                <div class="text-2xl font-bold text-red-800" id="missing-percentage">—</div>
+                                <div class="text-sm text-red-600">Missing</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pie Chart -->
+                        <div class="flex justify-center">
+                            <div class="relative">
+                                <canvas id="statusPieChart" width="300" height="300"></canvas>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Right side: Pie Chart (2/3) -->
-                    <div class="w-full lg:w-2/3 flex justify-center">
-                        <div class="relative">
-                            <canvas id="statusPieChart" width="300" height="300"></canvas>
+                    <!-- Right side: Line Chart (1/3) -->
+                    <div class="w-full lg:w-1/3">
+                        <h4 class="text-md font-semibold text-gray-700 mb-3">Assignment Trends</h4>
+                        <div class="h-64">
+                            <canvas id="trendLineChart" width="300" height="200"></canvas>
                         </div>
                     </div>
                 </div>
@@ -172,10 +166,10 @@
             `;
             
             // Reset stats during loading
+            document.getElementById('excellent-percentage').textContent = '—';
             document.getElementById('completion-rate').textContent = '—';
             document.getElementById('incomplete-percentage').textContent = '—';
-            document.getElementById('total-assignments').textContent = '—';
-            document.getElementById('problematic-assignment').textContent = '—';
+            document.getElementById('missing-percentage').textContent = '—';
         }
 
         // Function to calculate and display statistics
@@ -195,8 +189,10 @@
 
             // Calculate completion statistics
             let totalAssignmentsWithData = 0;
-            let actualCompletions = 0; // C + E
-            let actualIncomplete = 0;  // M + I
+            let excellentCount = 0;    // E
+            let completeCount = 0;     // C
+            let incompleteCount = 0;   // I
+            let missingCount = 0;      // M
             let assignmentMissingCounts = new Array(totalAssignments).fill(0);
 
             studentData.forEach(line => {
@@ -211,26 +207,32 @@
                     if (statusKey) {
                         totalAssignmentsWithData++;
                         
-                        if (statusKey === 'c' || statusKey === 'e') {
-                            actualCompletions++;
-                        } else if (statusKey === 'm' || statusKey === 'i') {
-                            actualIncomplete++;
-                            if (statusKey === 'm') {
-                                assignmentMissingCounts[index]++;
-                            }
+                        if (statusKey === 'e') {
+                            excellentCount++;
+                        } else if (statusKey === 'c') {
+                            completeCount++;
+                        } else if (statusKey === 'i') {
+                            incompleteCount++;
+                        } else if (statusKey === 'm') {
+                            missingCount++;
+                            assignmentMissingCounts[index]++;
                         }
                     }
                 });
             });
 
-            // Calculate completion rate: (C + E) / (C + E + M + I) × 100%
-            const completionRate = totalAssignmentsWithData > 0 
-                ? Math.round((actualCompletions / totalAssignmentsWithData) * 100) 
+            // Calculate individual percentages
+            const excellentPercentage = totalAssignmentsWithData > 0 
+                ? Math.round((excellentCount / totalAssignmentsWithData) * 100) 
                 : 0;
-
-            // Calculate incomplete/missing percentage: (M + I) / (C + E + M + I) × 100%
+            const completePercentage = totalAssignmentsWithData > 0 
+                ? Math.round((completeCount / totalAssignmentsWithData) * 100) 
+                : 0;
             const incompletePercentage = totalAssignmentsWithData > 0 
-                ? Math.round((actualIncomplete / totalAssignmentsWithData) * 100) 
+                ? Math.round((incompleteCount / totalAssignmentsWithData) * 100) 
+                : 0;
+            const missingPercentage = totalAssignmentsWithData > 0 
+                ? Math.round((missingCount / totalAssignmentsWithData) * 100) 
                 : 0;
 
             // Find most problematic assignment
@@ -248,17 +250,21 @@
                 : 'None';
 
             // Update the stats display
-            document.getElementById('completion-rate').textContent = `${completionRate}%`;
+            document.getElementById('excellent-percentage').textContent = `${excellentPercentage}%`;
+            document.getElementById('completion-rate').textContent = `${completePercentage}%`;
             document.getElementById('incomplete-percentage').textContent = `${incompletePercentage}%`;
-            document.getElementById('total-assignments').textContent = totalAssignments.toString();
-            document.getElementById('problematic-assignment').textContent = problematicAssignment;
+            document.getElementById('missing-percentage').textContent = `${missingPercentage}%`;
             
             // Update pie chart
             updatePieChart(lines, assignmentHeaders);
+            
+            // Update line chart
+            updateLineChart(lines, assignmentHeaders);
         }
 
-        // Global variable to store the chart instance
+        // Global variables to store the chart instances
         let statusChart = null;
+        let trendChart = null;
 
         // Function to update the pie chart
         function updatePieChart(lines, assignmentHeaders) {
@@ -366,6 +372,112 @@
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = ((context.parsed / total) * 100).toFixed(1);
                                     return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to update the line chart
+        function updateLineChart(lines, assignmentHeaders) {
+            const studentData = lines.slice(2);
+            
+            // Count status occurrences per assignment
+            const assignmentData = assignmentHeaders.map((_, index) => {
+                let excellent = 0, complete = 0, incomplete = 0, missing = 0;
+                
+                studentData.forEach(line => {
+                    const columns = line.split(',');
+                    const studentName = columns[0].trim();
+                    if (!studentName) return;
+                    
+                    const statusKey = (columns[index + 1] || '').trim();
+                    if (statusKey === 'e') excellent++;
+                    else if (statusKey === 'c') complete++;
+                    else if (statusKey === 'i') incomplete++;
+                    else if (statusKey === 'm') missing++;
+                });
+                
+                return { excellent, complete, incomplete, missing };
+            });
+
+            // Destroy existing chart if it exists
+            if (trendChart) {
+                trendChart.destroy();
+            }
+
+            // Create new line chart
+            const ctx = document.getElementById('trendLineChart').getContext('2d');
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: assignmentHeaders.map(h => h.trim()),
+                    datasets: [
+                        {
+                            label: 'Excellent!',
+                            data: assignmentData.map(d => d.excellent),
+                            borderColor: '#3B82F6',
+                            backgroundColor: '#3B82F6',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Complete',
+                            data: assignmentData.map(d => d.complete),
+                            borderColor: '#10B981',
+                            backgroundColor: '#10B981',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Incomplete',
+                            data: assignmentData.map(d => d.incomplete),
+                            borderColor: '#F59E0B',
+                            backgroundColor: '#F59E0B',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Missing',
+                            data: assignmentData.map(d => d.missing),
+                            borderColor: '#EF4444',
+                            backgroundColor: '#EF4444',
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 10,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
                                 }
                             }
                         }
