@@ -229,44 +229,43 @@
             }
 
             // Calculate completion statistics
-            let totalPossibleCompletions = totalStudents * totalAssignments;
-            let actualCompletions = 0;
-            let studentsWithMissingWork = 0;
+            let totalAssignmentsWithData = 0;
+            let actualCompletions = 0; // C + E
+            let actualIncomplete = 0;  // M + I
             let assignmentMissingCounts = new Array(totalAssignments).fill(0);
 
             studentData.forEach(line => {
                 const columns = line.split(',');
                 const studentName = columns[0].trim();
                 if (!studentName) return;
-
-                let studentHasMissing = false;
                 
                 assignmentHeaders.forEach((_, index) => {
                     const statusKey = (columns[index + 1] || '').trim();
                     
-                    if (statusKey === 'c' || statusKey === 'e') {
-                        actualCompletions++;
-                    } else if (statusKey === 'm') {
-                        studentHasMissing = true;
-                        assignmentMissingCounts[index]++;
-                    } else if (statusKey === 'i') {
-                        studentHasMissing = true;
+                    // Only count cells that have actual data (not empty)
+                    if (statusKey) {
+                        totalAssignmentsWithData++;
+                        
+                        if (statusKey === 'c' || statusKey === 'e') {
+                            actualCompletions++;
+                        } else if (statusKey === 'm' || statusKey === 'i') {
+                            actualIncomplete++;
+                            if (statusKey === 'm') {
+                                assignmentMissingCounts[index]++;
+                            }
+                        }
                     }
                 });
-
-                if (studentHasMissing) {
-                    studentsWithMissingWork++;
-                }
             });
 
-            // Calculate completion rate
-            const completionRate = totalPossibleCompletions > 0 
-                ? Math.round((actualCompletions / totalPossibleCompletions) * 100) 
+            // Calculate completion rate: (C + E) / (C + E + M + I) × 100%
+            const completionRate = totalAssignmentsWithData > 0 
+                ? Math.round((actualCompletions / totalAssignmentsWithData) * 100) 
                 : 0;
 
-            // Calculate incomplete/missing percentage
-            const incompletePercentage = totalStudents > 0 
-                ? Math.round((studentsWithMissingWork / totalStudents) * 100) 
+            // Calculate incomplete/missing percentage: (M + I) / (C + E + M + I) × 100%
+            const incompletePercentage = totalAssignmentsWithData > 0 
+                ? Math.round((actualIncomplete / totalAssignmentsWithData) * 100) 
                 : 0;
 
             // Find most problematic assignment
@@ -347,14 +346,7 @@
                 }
             });
 
-            // Add empty data if there are empty cells
-            if (statusCounts.empty > 0) {
-                chartLabels.push('Not Assigned');
-                chartData.push(statusCounts.empty);
-                chartColors.push('#E5E7EB'); // gray-200
-                chartHoverColors.push('#D1D5DB'); // gray-300
-            }
-
+            // Don't include empty cells in the pie chart - they represent unassigned work
             // If no data, show a message
             if (chartData.length === 0) {
                 chartLabels.push('No Data');
