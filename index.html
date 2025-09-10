@@ -6,6 +6,7 @@
     <title>Student Assignment Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -80,16 +81,9 @@
                     </div>
                     
                     <!-- Right side: Pie Chart (2/3) -->
-                    <div class="w-full lg:w-2/3">
-                        <div class="flex flex-col lg:flex-row items-center">
-                            <div class="w-full lg:w-1/2 mb-4 lg:mb-0">
-                                <canvas id="statusPieChart" width="250" height="250"></canvas>
-                            </div>
-                            <div class="w-full lg:w-1/2 lg:pl-4">
-                                <div id="chart-legend" class="space-y-2">
-                                    <!-- Chart legend will be populated by JS -->
-                                </div>
-                            </div>
+                    <div class="w-full lg:w-2/3 flex justify-center">
+                        <div class="relative">
+                            <canvas id="statusPieChart" width="300" height="300"></canvas>
                         </div>
                     </div>
                 </div>
@@ -267,6 +261,9 @@
         // Global variable to store the chart instance
         let statusChart = null;
 
+        // Register the datalabels plugin
+        Chart.register(ChartDataLabels);
+
         // Function to update the pie chart
         function updatePieChart(lines, assignmentHeaders) {
             const studentData = lines.slice(2);
@@ -357,7 +354,20 @@
                     },
                     plugins: {
                         legend: {
-                            display: false // We'll create a custom legend
+                            display: false
+                        },
+                        datalabels: {
+                            display: true,
+                            color: 'white',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: function(value, context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(0);
+                                return percentage + '%';
+                            }
                         },
                         tooltip: {
                             callbacks: {
@@ -371,9 +381,6 @@
                     }
                 }
             });
-
-            // Update custom legend
-            updateChartLegend(chartLabels, chartData, chartColors);
         }
 
         // Helper function to get color values
@@ -396,34 +403,6 @@
                 'red': '#DC2626'      // red-600
             };
             return colorMap[colorName] || '#4B5563';
-        }
-
-        // Function to update the custom chart legend
-        function updateChartLegend(labels, data, colors) {
-            const legendContainer = document.getElementById('chart-legend');
-            const total = data.reduce((a, b) => a + b, 0);
-            
-            let legendHTML = '';
-            labels.forEach((label, index) => {
-                const count = data[index];
-                const percentage = ((count / total) * 100).toFixed(1);
-                const color = colors[index];
-                
-                legendHTML += `
-                    <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-4 h-4 rounded-full mr-3" style="background-color: ${color};"></div>
-                            <span class="text-sm font-medium text-gray-700">${label}</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-semibold text-gray-900">${count}</div>
-                            <div class="text-xs text-gray-500">${percentage}%</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            legendContainer.innerHTML = legendHTML;
         }
 
         async function parseAndRender() {
